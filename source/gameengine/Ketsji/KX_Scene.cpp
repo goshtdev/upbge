@@ -294,7 +294,7 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
   m_gameDefaultCamera->data = (blender::ID *)BKE_object_obdata_add_from_type(bmain, OB_CAMERA, NULL);
   BKE_collection_object_add(bmain, scene->master_collection, m_gameDefaultCamera);
   /* Fix crash at start with some files: See 68589a31ebfb79165f99a979357d237e5413e904 */
-  BKE_view_layer_synced_ensure(scene, view_layer);
+  BKE_view_layer_synced_ensure(*bmain, scene, view_layer);
   Base *defaultCamBase = BKE_view_layer_base_find(view_layer, m_gameDefaultCamera);
   defaultCamBase->flag |= BASE_HIDDEN;
   DEG_relations_tag_update(bmain);
@@ -376,7 +376,7 @@ KX_Scene::~KX_Scene()
   while (GetRootParentList()->GetCount() > 0) {
     KX_GameObject *parentobj = GetRootParentList()->GetValue(0);
     this->RemoveObject(parentobj);
-    BKE_view_layer_synced_ensure(scene, BKE_view_layer_default_view(scene));
+    BKE_view_layer_synced_ensure(*bmain, scene, BKE_view_layer_default_view(scene));
   }
 
   if (m_obstacleSimulation) {
@@ -436,6 +436,7 @@ KX_Scene::~KX_Scene()
 
   RestoreVisibilityFlag();
 
+  BKE_scene_view_layers_synced_ensure(*bmain, scene);
   // Flush depsgraph updates a last time at ge exit
   BKE_scene_graph_update_tagged(depsgraph, bmain);
 
@@ -548,7 +549,7 @@ void KX_Scene::AddOverlayCollection(KX_Camera *overlay_cam, blender::Collection 
         const blender::Scene *scene = GetBlenderScene();
         BKE_collection_object_add(bmain, collection, replica->GetBlenderObject());
         /* If issue see: 68589a31ebfb79165f99a979357d237e5413e904 */
-        BKE_view_layer_synced_ensure(scene, BKE_view_layer_default_view(scene));
+        BKE_view_layer_synced_ensure(*bmain, scene, BKE_view_layer_default_view(scene));
       }
       // release here because AddReplicaObject AddRef's
       // the object is added to the scene so we don't want python to own a reference
@@ -719,6 +720,7 @@ void KX_Scene::UpdateDepsgraph(blender::Main *bmain,
     m_idsToUpdateInAllRenderPasses.clear();
   }
 
+  BKE_scene_view_layers_synced_ensure(*bmain, scene);
   /* We need the changes to be flushed before each draw loop! */
   blender::Depsgraph *depsgraph = CTX_data_depsgraph_pointer(KX_GetActiveEngine()->GetContext());
   BKE_scene_graph_update_tagged(depsgraph, bmain);
@@ -1420,14 +1422,14 @@ KX_GameObject *KX_Scene::AddFullCopyObject(KX_GameObject *gameobj,
     blender::Main *bmain = CTX_data_main(C);
     blender::Scene *scene = GetBlenderScene();
     ViewLayer *view_layer = BKE_view_layer_default_view(scene);
-    BKE_view_layer_synced_ensure(scene, view_layer);
+    BKE_view_layer_synced_ensure(*bmain, scene, view_layer);
     Base *base = BKE_view_layer_base_find(view_layer, ob);
     if (base) {
       Base *basen = blender::ed::object::add_duplicate(
           bmain, scene, view_layer, base, USER_DUP_OBDATA);
       BKE_collection_object_add_from(bmain,
                                      scene,
-                                     BKE_view_layer_camera_find(scene, view_layer),
+                                     BKE_view_layer_camera_find(*bmain, scene, view_layer),
                                      basen->object);  // add replica where is the active camera
 
       basen->flag |= (BASE_ENABLED_AND_MAYBE_VISIBLE_IN_VIEWPORT |

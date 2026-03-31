@@ -391,7 +391,7 @@ void KX_GameObject::ReplicateBlenderObject()
     ViewLayer *view_layer = BKE_view_layer_default_view(scene);
     BKE_collection_object_add_from(bmain,
                                    scene,
-                                   BKE_view_layer_camera_find(scene, view_layer),
+                                   BKE_view_layer_camera_find(*bmain, scene, view_layer),
                                    newob);  // add replica where is the active camera
 
     /* Avoid to make instance_collections "containers" visibled

@@ -503,7 +503,7 @@ static ID **get_selected_and_linked_obs(bContext *C, short *count, short scavisf
   ViewLayer *view_layer = CTX_data_view_layer(C);
   /* Add view_layer_synced_ensure here just in case,
    * before iteration on view_layer->object_bases */
-  BKE_view_layer_synced_ensure(scene, view_layer);
+  BKE_view_layer_synced_ensure(*bmain, scene, view_layer);
   Object *ob, *obt, *obact = CTX_data_active_object(C);
   ID **idar;
   bSensor *sens;

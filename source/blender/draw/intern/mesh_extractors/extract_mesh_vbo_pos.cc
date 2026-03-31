@@ -67,7 +67,7 @@ static void extract_positions_bm_float4(const MeshRenderData &mr, MutableSpan<fl
     }
   });
 
-  const Span<int> loose_edges = mr.loose_edges;
+  const IndexMask &loose_edges = mr.loose_edges;
   threading::parallel_for(loose_edges.index_range(), 4096, [&](const IndexRange range) {
     for (const int i : range) {
       const BMEdge &edge = *BM_edge_at_index(&const_cast<BMesh &>(bm), loose_edges[i]);
@@ -78,7 +78,7 @@ static void extract_positions_bm_float4(const MeshRenderData &mr, MutableSpan<fl
     }
   });
 
-  const Span<int> loose_verts = mr.loose_verts;
+  const IndexMask &loose_verts = mr.loose_verts;
   threading::parallel_for(loose_verts.index_range(), 2048, [&](const IndexRange range) {
     for (const int i : range) {
       const BMVert &vert = *BM_vert_at_index(&const_cast<BMesh &>(bm), loose_verts[i]);

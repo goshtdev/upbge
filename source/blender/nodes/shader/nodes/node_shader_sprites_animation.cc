@@ -24,33 +24,33 @@ namespace nodes::node_shader_sprite_anim_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Float>(N_("Frames"))
+  b.add_input<decl::Float>("Frames"_ustr)
       .default_value(0.0f)
       .min(0.0f)
       .max(10000.0f)
       .subtype(PROP_NONE);
-  b.add_input<decl::Float>(N_("Columns"))
+  b.add_input<decl::Float>("Columns"_ustr)
       .default_value(0.0f)
       .min(0.0f)
       .max(1024.0f)
       .subtype(PROP_NONE);
-  b.add_input<decl::Float>(N_("Rows"))
+  b.add_input<decl::Float>("Rows"_ustr)
       .default_value(0.0f)
       .min(0.0f)
       .max(1024.0f)
       .subtype(PROP_NONE);
-  b.add_input<decl::Float>(N_("Columns Offset"))
+  b.add_input<decl::Float>("Columns Offset"_ustr)
       .default_value(0.0f)
       .min(0.0f)
       .max(10000.0f)
       .subtype(PROP_NONE);
-  b.add_input<decl::Float>(N_("Rows Offset"))
+  b.add_input<decl::Float>("Rows Offset"_ustr)
       .default_value(0.0f)
       .min(0.0f)
       .max(10000.0f)
       .subtype(PROP_NONE);
-  b.add_output<decl::Vector>(N_("Location")).hide_value();
-  b.add_output<decl::Vector>(N_("Scale")).hide_value();
+  b.add_output<decl::Vector>("Location"_ustr).hide_value();
+  b.add_output<decl::Vector>("Scale"_ustr).hide_value();
 }
 
 static int gpu_shader_sprites_animation(GPUMaterial *mat,

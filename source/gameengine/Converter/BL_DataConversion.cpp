@@ -1310,7 +1310,7 @@ void BL_ConvertBlenderObjects(blender::Main *maggie,
   }
 
   /* Ensure objects base flags are up to date each time we call BL_ConvertObjects */
-  BKE_scene_base_flag_to_objects(blenderscene, BKE_view_layer_default_view(blenderscene));
+  BKE_scene_base_flag_to_objects(*maggie, blenderscene, BKE_view_layer_default_view(blenderscene));
 
   std::vector<blender::Object *> lod_objects = lod_level_object_list(
       BKE_view_layer_default_view(blenderscene));
@@ -1322,7 +1322,7 @@ void BL_ConvertBlenderObjects(blender::Main *maggie,
   // Beware of name conflict in linked data, it will not crash but will create confusion
   // in Python scripting and in certain actuators (replace mesh). Linked scene *should* have
   // no conflicting name for blender::Object, blender::Object data and Action.
-  for (SETLOOPER(blenderscene, sce_iter, base)) {
+  for (SETLOOPER(*maggie, blenderscene, sce_iter, base)) {
     blender::Object *blenderobject = base->object;
 
     if (converter->FindGameObject(blenderobject) != nullptr) {
@@ -1362,7 +1362,7 @@ void BL_ConvertBlenderObjects(blender::Main *maggie,
       DEG_relations_tag_update(maggie);
     }
 
-    BKE_view_layer_synced_ensure(blenderscene, BKE_view_layer_default_view(blenderscene));
+    BKE_view_layer_synced_ensure(*maggie, blenderscene, BKE_view_layer_default_view(blenderscene));
 
     KX_GameObject *gameobj = BL_gameobject_from_blenderobject(
         blenderobject, kxscene, rendertools, converter, libloading, converting_during_runtime);
