@@ -4532,6 +4532,15 @@ static std::unique_ptr<Button> but_new(const ButtonType type)
     case ButtonType::Scroll:
       but = std::make_unique<ButtonScrollBar>();
       break;
+    case ButtonType::Menu:
+      ATTR_FALLTHROUGH;
+    case ButtonType::Block:
+      ATTR_FALLTHROUGH;
+    case ButtonType::Pulldown:
+      ATTR_FALLTHROUGH;
+    case ButtonType::Popover:
+      but = std::make_unique<ButtonMenu>();
+      break;
     case ButtonType::But:
       but = std::make_unique<ButtonPush>();
       break;
@@ -7344,6 +7353,8 @@ std::string button_get_link(const Button *button, bContext *C)
     MEM_delete(expr_result);
   }
   return link;
+#else
+  return "";
 #endif
 }
 
