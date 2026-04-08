@@ -3073,6 +3073,8 @@ static void object_data_convert_curve_to_mesh(Main *bmain, Depsgraph *depsgraph,
     ob->gameflag = OB_PROP | OB_COLLISION;
   }
 
+  bke::mesh_ensure_active_uv_map(*mesh);
+
   /* Replace curve used by the object itself. */
   ob->data = id_cast<ID *>(mesh);
   ob->type = OB_MESH;
@@ -3382,6 +3384,8 @@ static Object *convert_mesh_to_mesh(Base &base, ObjectConversionInfo &info, Base
     }
   }
   BKE_mesh_nomain_to_mesh(new_mesh, ob_data_mesh, newob);
+
+  bke::mesh_ensure_active_uv_map(*ob_data_mesh);
 
   BKE_object_free_modifiers(newob, 0); /* after derivedmesh calls! */
 
@@ -3704,6 +3708,8 @@ static Object *convert_curves_to_mesh(Base &base, ObjectConversionInfo &info, Ba
   BKE_object_free_derived_caches(newob);
   BKE_object_free_modifiers(newob, 0);
 
+  bke::mesh_ensure_active_uv_map(*new_mesh);
+
   return newob;
 }
 
@@ -3865,6 +3871,8 @@ static Object *convert_grease_pencil_to_mesh(Base &base,
 
     BKE_object_free_derived_caches(newob);
     BKE_object_free_modifiers(newob, 0);
+
+    bke::mesh_ensure_active_uv_map(*new_mesh);
   }
   else {
     BKE_reportf(
@@ -4262,6 +4270,8 @@ static Object *convert_mball_to_mesh(Base &base,
     id_us_plus(&mesh->id);
     newob->data = id_cast<ID *>(mesh);
     newob->type = OB_MESH;
+
+    bke::mesh_ensure_active_uv_map(*mesh);
 
     if (info.obact && (info.obact->type == OB_MBALL)) {
       *r_act_base = *r_new_base;
