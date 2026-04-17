@@ -38,7 +38,7 @@ bl_info = {
 }
 
 
-def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_lib, copy_dlls, make_archive, report=print):
+def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_lib, copy_dlls, make_archive, icon_path="", report=print):
     import struct
 
     player_path = bpy.path.abspath(player_path)
@@ -217,6 +217,22 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             report({'ERROR'}, "Unknown archive type %s for runtime %s\n" % (arctype, player_path))
 
         print("done", flush=True)
+    # icon path implemention
+    if icon_path and ext == ".exe":
+        icon_path = bpy.path.abspath(icon_path)
+        if os.path.exists(icon_path):
+            try:
+                import subprocess
+                upbge_dir = os.path.dirname(bpy.app.binary_path)
+                version_string = bpy.app.version_string.split()[0][:3]
+                rcedit = os.path.join(upbge_dir, version_string, "rceditcustom", "rcedit-x64.exe")
+                if os.path.exists(rcedit):
+                    subprocess.check_call([rcedit, output_path, "--set-icon", icon_path])
+                    report({'INFO'}, "Icon applied successfully")
+                else:
+                    report({'WARNING'}, "rcedit not found, icon not applied")
+            except Exception as e:
+                report({'Warning'}, f"Icon apply failed: {e}")
 
 
 class PublishAllPlatforms(bpy.types.Operator):
@@ -238,6 +254,7 @@ class PublishAllPlatforms(bpy.types.Operator):
                          True,
                          True,
                          ps.make_archive,
+                         "",
                          self.report
                          )
         else:
@@ -253,6 +270,7 @@ class PublishAllPlatforms(bpy.types.Operator):
                             True,
                             True,
                             ps.make_archive,
+                            platform.icon_path,
                             self.report
                             )
             else:
@@ -340,6 +358,7 @@ class RENDER_PT_publish(bpy.types.Panel):
             platform = ps.platforms[ps.platforms_active]
             layout.prop(platform, 'name')
             layout.prop(platform, 'player_path')
+            layout.prop(platform, 'icon_path')
 
         layout.operator(PublishAllPlatforms.bl_idname, text='Publish Platforms')
 
@@ -510,7 +529,13 @@ class PlatformSettings(bpy.types.PropertyGroup):
             default = "//lib/platform/blenderplayer",
             subtype = 'FILE_PATH',
             )
-
+    
+    icon_path: bpy.props.StringProperty(
+            name = "Icon path",
+            description = "Path to the icon for this paltform",
+            default = "",
+            subtype = 'FILE_PATH',
+    )
     publish: bpy.props.BoolProperty(
             name = "Publish",
             description = "Whether or not to publish to this platform",
