@@ -38,12 +38,15 @@ bl_info = {
 }
 
 
-def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_lib, copy_dlls, make_archive, icon_path="", report=print):
+def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_lib, copy_dlls, make_archive, icon_path="",company_name="", game_name="", game_version="", report=print):
     import struct
 
     player_path = bpy.path.abspath(player_path)
     ext = os.path.splitext(player_path)[-1].lower()
     output_path = bpy.path.abspath(output_path)
+    upbge_dir = os.path.dirname(bpy.app.binary_path)
+    version_string = bpy.app.version_string.split()[0][:3]
+    rcedit_path = os.path.join(upbge_dir, version_string, "rceditcustom", "rcedit-x64.exe")
     output_dir = os.path.dirname(output_path)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -83,6 +86,31 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
         with open(player_path, "rb") as file:
             player_d = file.read()
             offset = file.tell()
+                # Icon Path 
+    if ext == ".exe" and os.path.exists(rcedit_path):
+        import subprocess
+        tmp_player = os.path.join(tempfile.gettempdir(), "tmp_player.exe")
+        shutil.copy2(player_path, tmp_player)
+        if icon_path: 
+            icon_path = bpy.path.abspath(icon_path)
+            if os.path.exists(icon_path):
+                if os.path.exists(rcedit_path):
+                    subprocess.check_call([rcedit_path, tmp_player, "--set-icon", icon_path])
+                    report({'INFO'}, "Icon applied successfully")
+                else:
+                    report({'WARNING'}, "rcedit not found, icon not applied")
+        
+        if company_name:
+            subprocess.check_call([rcedit_path, tmp_player, "--set-version-string", "CompanyName", company_name])
+        if game_name:
+            subprocess.check_call([rcedit_path, tmp_player, "--set-version-string", "FileDescription", game_name])
+            subprocess.check_call([rcedit_path, tmp_player, "--set-version-string", "ProductName", game_name])
+        if game_version:
+            subprocess.check_call([rcedit_path, tmp_player, "--set-file-version", game_version])
+            subprocess.check_call([rcedit_path, tmp_player,"--set-product-version", game_version])
+            with open(tmp_player, "rb") as f:
+                player_d = f.read()
+                offset = f.tell()
 
         # Create a tmp blend file (Blenderplayer doesn't like compressed blends)
         tempdir = tempfile.mkdtemp()
@@ -217,23 +245,6 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             report({'ERROR'}, "Unknown archive type %s for runtime %s\n" % (arctype, player_path))
 
         print("done", flush=True)
-    # icon path implemention
-    if icon_path and ext == ".exe":
-        icon_path = bpy.path.abspath(icon_path)
-        if os.path.exists(icon_path):
-            try:
-                import subprocess
-                upbge_dir = os.path.dirname(bpy.app.binary_path)
-                version_string = bpy.app.version_string.split()[0][:3]
-                rcedit = os.path.join(upbge_dir, version_string, "rceditcustom", "rcedit-x64.exe")
-                if os.path.exists(rcedit):
-                    subprocess.check_call([rcedit, output_path, "--set-icon", icon_path])
-                    report({'INFO'}, "Icon applied successfully")
-                else:
-                    report({'WARNING'}, "rcedit not found, icon not applied")
-            except Exception as e:
-                report({'Warning'}, f"Icon apply failed: {e}")
-
 
 class PublishAllPlatforms(bpy.types.Operator):
     bl_idname = "wm.publish_platforms"
@@ -271,6 +282,9 @@ class PublishAllPlatforms(bpy.types.Operator):
                             True,
                             ps.make_archive,
                             platform.icon_path,
+                            ps.company_name,
+                            ps.game_name,
+                            ps.game_version,
                             self.report
                             )
             else:
@@ -358,6 +372,9 @@ class RENDER_PT_publish(bpy.types.Panel):
             platform = ps.platforms[ps.platforms_active]
             layout.prop(platform, 'name')
             layout.prop(platform, 'player_path')
+            layout.prop(ps, 'company_name')
+            layout.prop(ps, 'game_name')
+            layout.prop(ps, 'game_version')
             layout.prop(platform, 'icon_path')
 
         layout.operator(PublishAllPlatforms.bl_idname, text='Publish Platforms')
@@ -583,7 +600,7 @@ class PublishSettings(bpy.types.PropertyGroup):
     publish_default_platform: bpy.props.BoolProperty(
             name = "Publish Default Platform",
             description = "Whether or not to publish the default platform (the Blender install running this addon) when publishing platforms",
-            default = True,
+            default = False,
             )
 
 
@@ -598,6 +615,25 @@ class PublishSettings(bpy.types.PropertyGroup):
             description = "Create a zip archive of the published game",
             default = False,
             )
+    
+    company_name : bpy.props.StringProperty(
+        name = "Company name",
+        description = "Add Developer or company name",
+        default = "",
+    )
+    
+    game_name : bpy.props.StringProperty(
+        name = "Game name",
+        description = "Game title shown in file properties",
+        default = "",
+    )
+
+    game_version : bpy.props.StringProperty(
+        name = "Version",
+        description = "Game version number",
+        default = "",
+    )
+
 classes = (
     PlatformSettings,
     AssetPath,
