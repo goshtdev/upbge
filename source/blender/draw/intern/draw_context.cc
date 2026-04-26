@@ -3036,8 +3036,8 @@ void DRW_game_render_loop(bContext *C,
   }
   view_data.compositor.set_used(draw_ctx.is_viewport_compositor_enabled());
 
-  auto should_draw_object = [&](Object &ob) -> bool {
-    return BKE_object_is_visible_in_viewport(v3d, &ob);
+  auto should_draw_object = [&](Object &ob, bool /*has_duplis*/) -> DrawFilter {
+    return BKE_object_is_visible_in_viewport(v3d, &ob) ? DrawFilter::Draw : DrawFilter::Skip;
   };
 
   draw_ctx.engines_init_and_sync([&](DupliCacheManager &duplis, ExtractionGraph &extraction) {
