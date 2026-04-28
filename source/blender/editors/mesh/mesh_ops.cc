@@ -195,6 +195,7 @@ void ED_operatortypes_mesh()
   WM_operatortype_append(MESH_OT_reorder_vertices_spatial);
 
   WM_operatortype_append(MESH_OT_circularize);
+  WM_operatortype_append(MESH_OT_flatten);
 
 #ifdef WITH_GAMEENGINE
   WM_operatortype_append(MESH_OT_navmesh_make);
@@ -203,7 +204,6 @@ void ED_operatortypes_mesh()
   WM_operatortype_append(MESH_OT_navmesh_reset);
   WM_operatortype_append(MESH_OT_navmesh_clear);
 #endif
-
 }
 
 #if 0 /* UNUSED, remove? */
