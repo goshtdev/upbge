@@ -23,7 +23,10 @@ import shutil
 import tarfile
 import time
 import stat
-
+import struct
+import subprocess
+import ctypes
+import platform as _platform
 
 bl_info = {
     "name": "Game Engine Publishing",
@@ -39,7 +42,7 @@ bl_info = {
 
 
 def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_lib, copy_dlls, make_archive, icon_path="",company_name="", description="", game_version="", report=print):
-    import struct
+
 
     player_path = bpy.path.abspath(player_path)
     ext = os.path.splitext(player_path)[-1].lower()
@@ -51,7 +54,6 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    import platform as _platform
     python_dir = os.path.dirname(_platform.__file__)
 
     # Check the paths
@@ -84,21 +86,20 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
         with open(player_path, "rb") as file:
             player_d = file.read()
             offset = file.tell()
-                # Icon Path 
-    if ext == ".exe" and os.path.exists(rcedit_path):
-        import subprocess
-        tmp_player = os.path.join(tempfile.gettempdir(), "tmp_player.exe")
-        shutil.copy2(player_path, tmp_player)
-        if icon_path: 
-            icon_path = bpy.path.abspath(icon_path)
-            if os.path.exists(icon_path):
-                if os.path.exists(rcedit_path):
-                    rcedit_folder = os.path.join(version_string, "rceditcustom")
-                    rcedit_path = os.path.join(upbge_dir, rcedit_folder, "rcedit-x64.exe")
-                    subprocess.check_call([rcedit_path, tmp_player, "--set-icon", icon_path])
-                    report({'INFO'}, "Icon applied successfully")
-                else:
-                    report({'WARNING'}, "rcedit not found, icon not applied")
+    # Icon Path 
+        if ext == ".exe" and os.path.exists(rcedit_path):
+            tmp_player = os.path.join(tempfile.gettempdir(), "tmp_player.exe")
+            shutil.copy2(player_path, tmp_player)
+            if icon_path: 
+                icon_path = bpy.path.abspath(icon_path)
+                if os.path.exists(icon_path):
+                    if os.path.exists(rcedit_path):
+                        rcedit_folder = os.path.join(version_string, "rceditcustom")
+                        rcedit_path = os.path.join(upbge_dir, rcedit_folder, "rcedit-x64.exe")
+                        subprocess.check_call([rcedit_path, tmp_player, "--set-icon", icon_path])
+                        report({'INFO'}, "Icon applied successfully")
+                    else:
+                        report({'WARNING'}, "rcedit not found, icon not applied")
         
         if company_name:
             subprocess.check_call([rcedit_path, tmp_player, "--set-version-string", "CompanyName", company_name])
@@ -110,7 +111,7 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             subprocess.check_call([rcedit_path, tmp_player,"--set-product-version", game_version])
         with open(tmp_player, "rb") as f:
             player_d = f.read()
-            offset = f.tell()
+            offset = len(player_d)
 
         # Create a tmp blend file (Blenderplayer doesn't like compressed blends)
         tempdir = tempfile.mkdtemp()
@@ -164,7 +165,30 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             if os.path.exists(dst) and overwrite_lib:
                 shutil.rmtree(dst)
             if not os.path.exists(dst):
-                shutil.copytree(src, dst, ignore=shutil.ignore_patterns('__pycache__', 'site-packages'))
+                def _ignore_python(src_dir, names):
+                    ingnored = set()
+                    for name in names:
+                        if name =='__pycache__':
+                            ingnored.add(name)
+                        elif name == 'site-packages':
+                            ingnored.add(name)
+                    return ingnored
+                def _copy_site_packages(src_sp, dst_sp):
+                    keep = { 'numpy', 'numpy-2.3.4dist-info', 'uplogic', 'uplogic-0.15.dist-info'}
+                    os.makedirs(dst_sp, exist_ok=True)
+                    for item in os.listdir(src_sp):
+                        if item in keep:
+                            s = os.path.join(src_sp, item)
+                            d = os.path.join(dst_sp, item)
+                            if os.path.isdir(s):
+                                shutil.copytree(s, d, ignore=shutil.ignore_patterns('__pycache__'))
+                            else:
+                                shutil.copy2(s, d)
+                shutil.copytree(src, dst, ignore=_ignore_python)
+                src_sp = os.path.join(src, 'site-packages')
+                dst_sp = os.path.join(dst, 'site-packages')
+                if os.path.exists(src_sp):
+                    _copy_site_packages(src_sp, dst_sp)
                 print("done", flush=True)
             else:
                 print("used existing Python folder", flush=True)
@@ -196,7 +220,11 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             os.path.join(ver, "scripts", "bge"),
             os.path.join(ver, "scripts", "modules"),
         ]
-        for subdir in data_subdirs + scripts_subdirs:
+        python_subdirs= [
+            os.path.join(ver, "python", "bin"),
+            os.path.join(ver, "python", "DLLs")
+        ]
+        for subdir in data_subdirs + scripts_subdirs + python_subdirs:
             src = os.path.join(upbge_dir, subdir)
             dst = os.path.join(output_dir, subdir)
             if os.path.exists(src) and not os.path.exists(dst):
@@ -257,6 +285,12 @@ def WriteRuntime(player_path, output_path, asset_paths, copy_python, overwrite_l
             report({'ERROR'}, "Unknown archive type %s for runtime %s\n" % (arctype, player_path))
 
         print("done", flush=True)
+    # Force Windows icon cache refresh
+    if _platform.system() == "Windows":
+        os.utime(output_path, None)
+        ctypes.windll.shell32.SHChangeNotify(0x00000008, 0x0000, None, None)
+        ctypes.windll.user32.UpdateWindow(ctypes.windll.user32.GetShellWindow())
+
 
 class PublishAllPlatforms(bpy.types.Operator):
     bl_idname = "wm.publish_platforms"
