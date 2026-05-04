@@ -196,7 +196,8 @@ void Instance::init(const int2 &output_res,
       sampling.reset();
     }
     if (is_playback) {
-      sampling.reset();
+      /* UPBGE: Allow sampling accum in playback mode for Samples per frame option */
+      //sampling.reset();
     }
   }
   else {
