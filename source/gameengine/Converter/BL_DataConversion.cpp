@@ -853,27 +853,6 @@ static KX_GameObject *BL_gameobject_from_blenderobject(blender::Object *ob,
 
       break;
     }
-
-    case OB_EMPTY:
-    case OB_LIGHTPROBE:
-    case OB_MBALL:
-    case OB_SURF:
-    case OB_GREASE_PENCIL:
-    case OB_POINTCLOUD:
-    case OB_VOLUME:
-    case OB_CURVES:
-    case OB_SPEAKER: {
-#ifdef WITH_PYTHON
-      gameobj = BL_gameobject_from_customobject(ob, &KX_GameObject::Type, kxscene);
-#endif
-
-      if (!gameobj) {
-        gameobj = new KX_EmptyObject();
-      }
-      // set transformation
-      break;
-    }
-
     case OB_FONT: {
       /* font objects have no bounding box */
       KX_FontObject *fontobj = nullptr;
@@ -895,26 +874,30 @@ static KX_GameObject *BL_gameobject_from_blenderobject(blender::Object *ob,
       kxscene->GetFontList()->Add(CM_AddRef(fontobj));
       break;
     }
-
-#ifdef THREADED_DAG_WORKAROUND
-    case OB_CURVES_LEGACY: {
-      /*blender::bContext *C = KX_GetActiveEngine()->GetContext();
-      if (ob->runtime.curve_cache == nullptr) {
-        blender::Depsgraph *depsgraph = CTX_data_depsgraph_on_load(C);
-        BKE_displist_make_curveTypes(
-            depsgraph, blenderscene, DEG_get_evaluated_object(depsgraph, ob), false, false);
-      }*/
-      // eevee add curves to scene.objects list
+    case OB_EMPTY:
+    case OB_LIGHTPROBE:
+    case OB_MBALL:
+    case OB_SURF:
+    case OB_GREASE_PENCIL:
+    case OB_GPENCIL_LEGACY:
+    case OB_CURVES_LEGACY:
+    case OB_POINTCLOUD:
+    case OB_LATTICE:
+    case OB_VOLUME:
+    case OB_CURVES:
+    case OB_SPEAKER: {
 #ifdef WITH_PYTHON
       gameobj = BL_gameobject_from_customobject(ob, &KX_GameObject::Type, kxscene);
 #endif
+
       if (!gameobj) {
         gameobj = new KX_EmptyObject();
       }
       // set transformation
       break;
     }
-#endif
+    default:
+      break;
   }
 
   if (gameobj) {
