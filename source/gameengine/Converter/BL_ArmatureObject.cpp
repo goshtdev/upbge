@@ -434,8 +434,9 @@ static void compute_bendy_bones_matrices(blender::Object *armOb)
   if (armOb->pose) {
     for (blender::bPoseChannel &pchan : armOb->pose->chanbase) {
       /* Only update bendy bones (segments > 1) */
-      if (pchan.bone && pchan.bone->segments > 1) {
-        BKE_pchan_bbone_segments_cache_compute(&pchan);
+      Bone *bone = pchan.bone_get(*armOb);
+      if (bone != nullptr && bone->segments > 1) {
+        BKE_pchan_bbone_segments_cache_compute({&pchan, bone}, *(bArmature *)(armOb->data));
       }
     }
   }
