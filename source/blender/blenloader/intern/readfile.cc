@@ -2031,7 +2031,7 @@ static void direct_link_id_override_property(BlendDataReader *reader,
 {
   BLO_read_string(reader, &op->rna_path);
 
-  op->tag = 0; /* Runtime only. */
+  op->tag = {}; /* Runtime only. */
 
   BLO_read_struct_list(reader, IDOverrideLibraryPropertyOperation, &op->operations);
 
@@ -2039,7 +2039,7 @@ static void direct_link_id_override_property(BlendDataReader *reader,
     BLO_read_string(reader, &opop.subitem_reference_name);
     BLO_read_string(reader, &opop.subitem_local_name);
 
-    opop.tag = 0; /* Runtime only. */
+    opop.tag = {}; /* Runtime only. */
   }
 }
 

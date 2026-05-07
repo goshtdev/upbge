@@ -60,7 +60,7 @@ BL_SceneConverter::~BL_SceneConverter()
 void BL_SceneConverter::RegisterGameObject(KX_GameObject *gameobject,
                                                   blender::Object *for_blenderobject)
 {
-  if (gameobject->IsDupliInstance()) {
+  if (gameobject->IsUpbgeDupliInstance()) {
     return;
   }
   // 	CM_FunctionDebug("object name: " << gameobject->GetName());
@@ -77,7 +77,7 @@ void BL_SceneConverter::RegisterGameObject(KX_GameObject *gameobject,
  * m_map_blender_to_gameobject is freed after conversion (not anymore in 0.3) */
 void BL_SceneConverter::UnregisterGameObject(KX_GameObject *gameobject)
 {
-  if (gameobject->IsDupliInstance()) {
+  if (gameobject->IsUpbgeDupliInstance()) {
     return; // We want blenderObject dupli Base to remain accessible
   }
   blender::Object *bobp = gameobject->GetBlenderObject();

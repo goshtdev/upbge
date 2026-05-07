@@ -191,7 +191,7 @@ base class --- :class:`~bge.types.EXP_PyObjectPlus`
 
       :type: str
 
-   .. method:: addObject(object, reference, time=0.0, dupli=False)
+   .. method:: addObject(object, reference, time=0.0, fullCopy=False)
 
       Adds an object to the scene like the Add Object Actuator would.
 
@@ -203,8 +203,8 @@ base class --- :class:`~bge.types.EXP_PyObjectPlus`
       :type time: float
       :return: The newly added object.
       :rtype: :class:`~bge.types.KX_GameObject`
-      :arg dupli: Full duplication of object data (mesh, materials...).
-      :type dupli: boolean
+      :arg fullCopy: Full duplication of object data (mesh, materials...).
+      :type fullCopy: boolean
 
    .. method:: end()
 

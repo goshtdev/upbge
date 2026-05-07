@@ -192,7 +192,12 @@ void LA_Launcher::InitEngine()
 
   m_canvas->Init();
 
-  WM_cursor_grab_enable(CTX_wm_window(m_context), WM_CURSOR_WRAP_XY, nullptr, false);
+  const char *backend = GHOST_ISystem::getSystemBackend();
+  const bool is_wayland = backend && (strcmp(backend, "WAYLAND") == 0);
+
+  if (is_wayland) {
+    WM_cursor_grab_enable(CTX_wm_window(m_context), WM_CURSOR_WRAP_XY, nullptr, false);
+  }
 
   bool show_mouse = (gm.flag & GAME_SHOW_MOUSE) != 0;
   if (show_mouse) {
@@ -203,7 +208,9 @@ void LA_Launcher::InitEngine()
   }
   m_canvas->SetMousePosition(m_canvas->GetWidth() / 2, m_canvas->GetHeight() / 2);
 
-  WM_cursor_grab_enable(CTX_wm_window(m_context), WM_CURSOR_WRAP_NONE, nullptr, !show_mouse);
+  if (is_wayland) {
+    WM_cursor_grab_enable(CTX_wm_window(m_context), WM_CURSOR_WRAP_NONE, nullptr, !show_mouse);
+  }
 
   // Create the inputdevices.
   m_inputDevice = new DEV_InputDevice();
@@ -335,7 +342,12 @@ void LA_Launcher::ExitEngine()
     // load.
     m_canvas->SetMouseState(RAS_ICanvas::MOUSE_NORMAL);
   }
-  WM_cursor_grab_disable(CTX_wm_window(m_context), nullptr);
+  const char *backend = GHOST_ISystem::getSystemBackend();
+  const bool is_wayland = backend && (strcmp(backend, "WAYLAND") == 0);
+
+  if (is_wayland) {
+    WM_cursor_grab_disable(CTX_wm_window(m_context), nullptr);
+  }
 
   // Set vsync mode back to original value.
   m_canvas->SetSwapInterval(m_savedData.vsync);

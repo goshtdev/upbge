@@ -471,8 +471,8 @@ int BL_ArmatureConstraint::py_attr_setattr(EXP_PyObjectPlus *self_v,
                         "constraint.active = bool: BL_ArmatureConstraint, expected True or False");
         return PY_SET_ATTR_FAIL;
       }
-      self->m_constraint->flag = (self->m_constraint->flag & ~CONSTRAINT_OFF) |
-                                 ((ival) ? 0 : CONSTRAINT_OFF);
+      self->m_constraint->flag = eBConstraint_Flags(self->m_constraint->flag & ~CONSTRAINT_OFF) |
+                                 ((ival) ? eBConstraint_Flags(0) : eBConstraint_Flags(CONSTRAINT_OFF));
       return PY_SET_ATTR_SUCCESS;
 
     case BCA_IKWEIGHT:
@@ -513,7 +513,7 @@ int BL_ArmatureConstraint::py_attr_setattr(EXP_PyObjectPlus *self_v,
                             "positive integer");
             return PY_SET_ATTR_FAIL;
           }
-          ikconstraint->mode = ival;
+          ikconstraint->mode = eDistLimit_Modes(ival);
           return PY_SET_ATTR_SUCCESS;
       }
       // should not come here

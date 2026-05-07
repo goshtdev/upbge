@@ -1041,7 +1041,7 @@ static Block *controller_state_mask_menu(bContext *C, ARegion *region, void *arg
   for (offset = 0; offset < 15; offset += 5) {
     block_align_begin(block);
     for (stbit = 0; stbit < 5; stbit++) {
-      but = uiDefButBitI(block,
+      but = uiDefButBit(block,
                          ButtonType::Toggle,
                          (1 << (stbit + offset)),
                          "",
@@ -1057,7 +1057,7 @@ static Block *controller_state_mask_menu(bContext *C, ARegion *region, void *arg
       button_func_set(but, check_controller_state_mask, but, &(cont->state_mask));
     }
     for (stbit = 0; stbit < 5; stbit++) {
-      but = uiDefButBitI(block,
+      but = uiDefButBit(block,
                          ButtonType::Toggle,
                          (1 << (stbit + offset + 15)),
                          "",
@@ -2710,7 +2710,7 @@ void logic_buttons(bContext *C, ARegion *region)
     split->prop(&settings_ptr, "show_state_panel", ITEM_R_NO_BG, "", ICON_DISCLOSURE_TRI_RIGHT);
 
     row = &split->row(true);
-    but = uiDefButBitS(block,
+    but = uiDefButBit(block,
                  ButtonType::Toggle,
                  OB_SHOWCONT,
                  ob->id.name + 2,
@@ -2865,7 +2865,7 @@ void logic_buttons(bContext *C, ARegion *region)
       continue;
 
     row = &layout->row(true);
-    but = uiDefButBitS(block,
+    but = uiDefButBit(block,
                  ButtonType::Toggle,
                  OB_SHOWSENS,
                  ob->id.name + 2,
@@ -2982,7 +2982,7 @@ void logic_buttons(bContext *C, ARegion *region)
     }
 
     row = &layout->row(true);
-    but = uiDefButBitS(block,
+    but = uiDefButBit(block,
                  ButtonType::Toggle,
                  OB_SHOWACT,
                  ob->id.name + 2,

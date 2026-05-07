@@ -116,7 +116,7 @@ static void bge_dupli_provider(DEGObjectIterData *data)
   blender::Depsgraph *depsgraph = CTX_data_depsgraph_pointer(C);
 
   for (KX_GameObject *game_obj : dupli_list) {
-    if (game_obj && game_obj->IsDupliInstance()) {
+    if (game_obj && game_obj->IsUpbgeDupliInstance()) {
       if (!game_obj->GetVisible()) {
         continue;
       }
@@ -201,7 +201,7 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
   m_inactivelist = new EXP_ListValue<KX_GameObject>();
   m_cameralist = new EXP_ListValue<KX_Camera>();
   m_fontlist = new EXP_ListValue<KX_FontObject>();
-  m_duplilist.clear();
+  m_upbgeDupliInstancesList.clear();
 
   m_filterManager = new KX_2DFilterManager();
   m_logicmgr = new SCA_LogicManager();
@@ -310,7 +310,7 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
   /* Configure Shading types and overlays according to
    * (viewport render or not) and (blenderplayer or not)
    */
-  CTX_wm_view3d(C)->shading.type = KX_GetActiveEngine()->ShadingTypeRuntime();
+  CTX_wm_view3d(C)->shading.type = eDrawType(KX_GetActiveEngine()->ShadingTypeRuntime());
 
   if (!KX_GetActiveEngine()->UseViewportRender()) {
     /* We want to indicate that we are in bge runtime. The flag can be used in draw code but in
@@ -410,7 +410,7 @@ KX_Scene::~KX_Scene()
     m_fontlist->Release();
   }
 
-  m_duplilist.clear();
+  m_upbgeDupliInstancesList.clear();
 
   if (m_filterManager) {
     delete m_filterManager;
@@ -458,19 +458,19 @@ KX_Scene::~KX_Scene()
 
 /*******************EEVEE INTEGRATION******************/
 
-void KX_Scene::AddDupliObjectToList(KX_GameObject *gameobj)
+void KX_Scene::AddUpbgeDupliInstanceToList(KX_GameObject *gameobj)
 {
-  auto it = std::find(m_duplilist.begin(), m_duplilist.end(), gameobj);
-  if (it == m_duplilist.end()) {
-    m_duplilist.push_back(gameobj);
+  auto it = std::find(m_upbgeDupliInstancesList.begin(), m_upbgeDupliInstancesList.end(), gameobj);
+  if (it == m_upbgeDupliInstancesList.end()) {
+    m_upbgeDupliInstancesList.push_back(gameobj);
   }
 }
 
-void KX_Scene::RemoveDupliObjectFromList(KX_GameObject *gameobj)
+void KX_Scene::RemoveUpbgeDupliInstanceFromList(KX_GameObject *gameobj)
 {
-  auto it = std::find(m_duplilist.begin(), m_duplilist.end(), gameobj);
-  if (it != m_duplilist.end()) {
-    m_duplilist.erase(it);
+  auto it = std::find(m_upbgeDupliInstancesList.begin(), m_upbgeDupliInstancesList.end(), gameobj);
+  if (it != m_upbgeDupliInstancesList.end()) {
+    m_upbgeDupliInstancesList.erase(it);
   }
 }
 
@@ -574,7 +574,7 @@ void KX_Scene::RemoveOverlayCollection(blender::Collection *collection)
     /* Handle the case of replicas added */
     for (KX_GameObject *gameobj : GetObjectList()) {
       if (BKE_collection_has_object(collection, gameobj->GetBlenderObject())) {
-        if (gameobj->IsReplica() || gameobj->IsDupliInstance()) {
+        if (gameobj->IsReplica() || gameobj->IsUpbgeDupliInstance()) {
           if (gameobj->IsReplica()) {
             blender::bContext *C = KX_GetActiveEngine()->GetContext();
             blender::Main *bmain = CTX_data_main(C);
@@ -1214,7 +1214,7 @@ void KX_Scene::RestoreVisibilityFlag()
        it != m_obVisibilityFlag.end();
        it++) {
     blender::Object *ob = it->first;
-    ob->visibility_flag = it->second;
+    ob->visibility_flag = eObject_VisibilityFlag(it->second);
     DEG_id_tag_update(&ob->id, ID_RECALC_SYNC_TO_EVAL);
   }
   blender::bContext *C = KX_GetActiveEngine()->GetContext();
@@ -1410,12 +1410,12 @@ KX_GameObject *KX_Scene::AddFullCopyObject(KX_GameObject *gameobj,
 {
   blender::Object *ob = gameobj->GetBlenderObject();
   if (ob && (ob->gameflag & OB_DUPLI_UPBGE)) {
-    CM_Warning("Full duplication of an UPBGE dupli base is not supported");
+    CM_Warning("Full Copy of an UPBGE dupli base is not supported");
     return nullptr;
   }
   if (ob) {
     if (ob->instance_collection) {
-      CM_Warning("Full duplication of an instance collection is not supported: " << ob->id.name + 2);
+      CM_Warning("Full Copy of an instance collection is not supported: " << ob->id.name + 2);
       return nullptr;
     }
     blender::bContext *C = KX_GetActiveEngine()->GetContext();
@@ -3190,7 +3190,7 @@ PyAttributeDef KX_Scene::Attributes[] = {
 
 EXP_PYMETHODDEF_DOC(KX_Scene,
                     addObject,
-                    "addObject(object, other, time=0, dupli=0)\n"
+                    "addObject(object, other, time=0, fullCopy=0)\n"
                     "Returns the added object.\n")
 {
   PyObject *pyob, *pyreference = Py_None;
@@ -3199,9 +3199,9 @@ EXP_PYMETHODDEF_DOC(KX_Scene,
   float time = 0.0f;
 
   // Full duplication of ob->data
-  int duplicate = 0;
+  int fullCopy = 0;
 
-  if (!PyArg_ParseTuple(args, "O|Ofi:addObject", &pyob, &pyreference, &time, &duplicate))
+  if (!PyArg_ParseTuple(args, "O|Ofi:addObject", &pyob, &pyreference, &time, &fullCopy))
     return nullptr;
 
   if (!ConvertPythonToGameObject(
@@ -3209,24 +3209,24 @@ EXP_PYMETHODDEF_DOC(KX_Scene,
           pyob,
           &ob,
           false,
-          "scene.addObject(object, reference, time, dupli): KX_Scene (first argument)") ||
+          "scene.addObject(object, reference, time, fullCopy): KX_Scene (first argument)") ||
       !ConvertPythonToGameObject(
           m_logicmgr,
           pyreference,
           &reference,
           true,
-          "scene.addObject(object, reference, time, dupli): KX_Scene (second argument)"))
+          "scene.addObject(object, reference, time, fullCopy): KX_Scene (second argument)"))
     return nullptr;
 
   if (!m_inactivelist->SearchValue(ob)) {
     PyErr_Format(
         PyExc_ValueError,
-        "scene.addObject(object, reference, time, dupli): KX_Scene (first argument): object "
+        "scene.addObject(object, reference, time, fullCopy): KX_Scene (first argument): object "
         "must be in an inactive layer");
     return nullptr;
   }
-  bool dupli = duplicate == 1;
-  KX_GameObject *replica = !dupli ? AddReplicaObject(ob, reference, time) :
+  bool deepCopy = fullCopy == 1;
+  KX_GameObject *replica = !deepCopy ? AddReplicaObject(ob, reference, time) :
                                     AddFullCopyObject(ob, reference, time);
 
   /* Can happen when trying to Duplicate an instance_collection */
@@ -3236,7 +3236,7 @@ EXP_PYMETHODDEF_DOC(KX_Scene,
 
   // release here because AddReplicaObject AddRef's
   // the object is added to the scene so we don't want python to own a reference
-  if (!dupli) {
+  if (!deepCopy) {
     replica->Release();
   }
   return replica->GetProxy();
@@ -3530,7 +3530,7 @@ EXP_PYMETHODDEF_DOC(KX_Scene,
   blender::Object *ob = (blender::Object *)id;
   if (ob) {
     KX_GameObject *gameobj = GetGameObjectFromObject(ob);
-    if (gameobj->IsDupliInstance()) {
+    if (gameobj->IsUpbgeDupliInstance()) {
       PyErr_Format(PyExc_ValueError,
                    "getGameObjectFromObject: Can't be used with a dupli instance of dupli Base %s: ",
                    ob->id.name + 2);

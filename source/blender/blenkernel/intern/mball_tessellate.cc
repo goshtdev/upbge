@@ -1186,7 +1186,7 @@ static void init_meta(Depsgraph *depsgraph, PROCESS *process, Scene *scene, Obje
   char obname[MAX_ID_NAME];
   SceneBaseIter iter;
   const eEvaluationMode deg_eval_mode = DEG_get_mode(depsgraph);
-  const short parenting_dupli_transflag = (OB_DUPLIFACES | OB_DUPLIVERTS);
+  const int parenting_dupli_transflag = (OB_DUPLIFACES | OB_DUPLIVERTS);
 
   /* Copy object matrices to cope with duplicators from #BKE_scene_base_iter_next. */
   float obinv[4][4], obmat[4][4];
@@ -1296,6 +1296,9 @@ static void init_meta(Depsgraph *depsgraph, PROCESS *process, Scene *scene, Obje
 
       switch (ml.type) {
         case MB_BALL:
+        case MB_TUBEX:
+        case MB_TUBEY:
+        case MB_TUBEZ:
           break;
         case MB_CUBE: /* cube is "expanded" by expz, expy and expx */
           expz += ml.expz;

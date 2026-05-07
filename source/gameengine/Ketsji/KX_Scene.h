@@ -160,7 +160,7 @@ class KX_Scene : public KX_PythonProxy, public SCA_IScene {
   EXP_ListValue<KX_Camera> *m_cameralist;
   /// The set of fonts for this scene
   EXP_ListValue<KX_FontObject> *m_fontlist;
-  std::vector<KX_GameObject *> m_duplilist;
+  std::vector<KX_GameObject *> m_upbgeDupliInstancesList;
 
   SG_QList m_sghead;  // list of nodes that needs scenegraph update
                       // the Dlist is not object that must be updated
@@ -367,10 +367,10 @@ class KX_Scene : public KX_PythonProxy, public SCA_IScene {
                                  bool isOverlayPass);
   const std::vector<KX_GameObject *> &GetDupliListVector() const
   {
-    return m_duplilist;
+    return m_upbgeDupliInstancesList;
   }
-  void AddDupliObjectToList(KX_GameObject *gameobj);
-  void RemoveDupliObjectFromList(KX_GameObject *gameobj);
+  void AddUpbgeDupliInstanceToList(KX_GameObject *gameobj);
+  void RemoveUpbgeDupliInstanceFromList(KX_GameObject *gameobj);
   /***************End of EEVEE INTEGRATION**********************/
 
   RAS_BucketManager *GetBucketManager() const;
@@ -382,6 +382,10 @@ class KX_Scene : public KX_PythonProxy, public SCA_IScene {
   static bool KX_ScenegraphUpdateFunc(SG_Node *node, void *gameobj, void *scene);
   static bool KX_ScenegraphRescheduleFunc(SG_Node *node, void *gameobj, void *scene);
   void UpdateParents(double curtime);
+
+  /* Warning: This is different from upbge dupli instances
+   * -> it is related to Groups (in old Blender version)
+   *    or Instance Collections (in newer Blender versions) */
   void DupliGroupRecurse(KX_GameObject *groupobj, int level);
   bool IsObjectInGroup(KX_GameObject *gameobj)
   {

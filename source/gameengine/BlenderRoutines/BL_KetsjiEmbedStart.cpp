@@ -413,7 +413,7 @@ extern "C" void StartKetsjiShell(blender::bContext *C,
   InitBlenderContextVariables(C, wm_backup, startscene);
 
   /* Restore shading type we had before game start */
-  CTX_wm_view3d(C)->shading.type = shadingTypeBackup;
+  CTX_wm_view3d(C)->shading.type = eDrawType(shadingTypeBackup);
 
   /* Restore saved v3d->camera before bge start */
   CTX_wm_view3d(C)->camera = backup_cam;

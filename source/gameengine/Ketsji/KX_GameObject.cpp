@@ -93,7 +93,7 @@ KX_GameObject::KX_GameObject()
       m_isReplica(false),            // eevee
       m_forceIgnoreParentTx(false),  // eevee
       m_previousLodLevel(-1),        // eevee
-      m_is_dupli_instance(false),    // eevee
+      m_isUpbgeDupliInstance(false),    // eevee
       m_layer(0),
       m_lodManager(nullptr),
       m_currentLodLevel(0),
@@ -243,9 +243,9 @@ void KX_GameObject::ForceIgnoreParentTx()
 
 void KX_GameObject::TagForTransformUpdate(bool is_overlay_pass, bool is_last_render_pass)
 {
-  if (m_is_dupli_instance) {
+  if (m_isUpbgeDupliInstance) {
     if (GetSGNode()->IsDirty(SG_Node::DIRTY_RENDER)) {
-      TagDupliForTaaReset();
+      TagUpbgeDupliInstanceForTaaReset();
       if (is_last_render_pass) {
         GetSGNode()->ClearDirty(SG_Node::DIRTY_RENDER);
       }
@@ -329,7 +329,7 @@ void KX_GameObject::TagForTransformUpdate(bool is_overlay_pass, bool is_last_ren
 
 void KX_GameObject::TagForTransformUpdateEvaluated()
 {
-  if (m_is_dupli_instance) {
+  if (m_isUpbgeDupliInstance) {
     return;
   }
   float object_to_world[4][4];
@@ -430,16 +430,18 @@ void KX_GameObject::DiscardRenderedObject()
       ctrl->RemoveSoftBodyModifier(ob);
     }
     /* 1. Rendered blender::Object is a dupli instance, just erase it from duplis list */
-    if (m_is_dupli_instance) {
+    if (m_isUpbgeDupliInstance) {
       if (GetScene()) {
-        TagDupliForTaaReset();
-        GetScene()->RemoveDupliObjectFromList(this);
+        TagUpbgeDupliInstanceForTaaReset();
+        GetScene()->RemoveUpbgeDupliInstanceFromList(this);
       }
-      m_is_dupli_instance = false;
+      m_isUpbgeDupliInstance = false;
       return;
     }
     /* 2. Rendered blender::Object is a Replica (m_isReplica = true).
-     * As we created a new blender::Object during KX_GameObject::ProcessReplica,
+     * As we created a new blender::Object during KX_GameObject::ProcessReplica
+     * (It is either a simple copy (BKE_id_copy) or a deep copy
+     * (blender::ed::object::add_duplicate) of the original Object),
      * we need to remove it with BKE_id_delete */
     if (m_isReplica) {
       blender::bContext *C = KX_GetActiveEngine()->GetContext();
@@ -456,21 +458,21 @@ void KX_GameObject::DiscardRenderedObject()
   }
 }
 
-void KX_GameObject::CreateDupliObjectFromExisting()
+void KX_GameObject::CreateUpbgeDupliInstanceFromExisting()
 {
   if (m_pBlenderObject && (m_pBlenderObject->gameflag & OB_DUPLI_UPBGE) == 0) {
     return;
   }
-  m_is_dupli_instance = true;
+  m_isUpbgeDupliInstance = true;
 
-  TagDupliForTaaReset();
+  TagUpbgeDupliInstanceForTaaReset();
 
-  GetScene()->AddDupliObjectToList(this);
+  GetScene()->AddUpbgeDupliInstanceToList(this);
 }
 
-void KX_GameObject::TagDupliForTaaReset()
+void KX_GameObject::TagUpbgeDupliInstanceForTaaReset()
 {
-  if (!m_is_dupli_instance) {
+  if (!m_isUpbgeDupliInstance) {
     return;
   }
 
@@ -960,10 +962,10 @@ void KX_GameObject::ProcessReplica()
 
   ReplicateBlenderObject();
 
-  m_is_dupli_instance = false;
+  m_isUpbgeDupliInstance = false;
 
   GetScene()->GetBlenderSceneConverter()->RegisterGameObject(this, m_pBlenderObject);
-  CreateDupliObjectFromExisting();
+  CreateUpbgeDupliInstanceFromExisting();
 
   if (m_lodManager) {
     m_lodManager->AddRef();
@@ -1122,7 +1124,7 @@ void KX_GameObject::ApplyRotation(const MT_Vector3 &drot, bool local)
 
 void KX_GameObject::UpdateBlenderObjectMatrix(blender::Object *blendobj)
 {
-  if (m_is_dupli_instance) {
+  if (m_isUpbgeDupliInstance) {
     return;
   }
   if (!blendobj)
@@ -1342,7 +1344,7 @@ static void setVisible_recursive(SG_Node *node, bool v)
 
 void KX_GameObject::SetVisible(bool v, bool recursive)
 {
-  if (m_is_dupli_instance) {
+  if (m_isUpbgeDupliInstance) {
     if (recursive) {
       setVisible_recursive(GetSGNode(), v);
     }
@@ -1463,7 +1465,7 @@ void KX_GameObject::setAngularVelocity(const MT_Vector3 &ang_vel, bool local)
 void KX_GameObject::SetObjectColor(const MT_Vector4 &rgbavec)
 {
   m_objectColor = rgbavec;
-  if (m_is_dupli_instance) {
+  if (m_isUpbgeDupliInstance) {
     return;
   }
   blender::Object *ob_orig = GetBlenderObject();

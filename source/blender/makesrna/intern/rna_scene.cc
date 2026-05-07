@@ -817,7 +817,7 @@ static void rna_ToolSettings_snap_mode_set(PointerRNA *ptr, int value)
 {
   ToolSettings *ts = static_cast<ToolSettings *>(ptr->data);
   if (value != 0) {
-    ts->snap_mode = value;
+    ts->snap_mode = eSnapMode(value);
   }
 }
 
@@ -825,7 +825,7 @@ static void rna_ToolSettings_snap_uv_mode_set(PointerRNA *ptr, int value)
 {
   ToolSettings *ts = static_cast<ToolSettings *>(ptr->data);
   if (value != 0) {
-    ts->snap_uv_mode = value;
+    ts->snap_uv_mode = eSnapMode(value);
   }
 }
 
@@ -1839,7 +1839,7 @@ static void rna_RenderSettings_views_format_set(PointerRNA *ptr, int value)
     }
   }
 
-  rd->views_format = value;
+  rd->views_format = eSceneViews_Format(value);
 }
 
 static void rna_RenderSettings_engine_set(PointerRNA *ptr, int value)
@@ -1965,6 +1965,7 @@ void rna_Scene_compositor_update(Main *bmain, Scene * /*scene*/, PointerRNA *ptr
 
   if (scene->compositing_node_group) {
     bNodeTree *ntree = reinterpret_cast<bNodeTree *>(scene->compositing_node_group);
+    DEG_id_tag_update(&ntree->id, ID_RECALC_NTREE_OUTPUT);
     WM_main_add_notifier(NC_NODE | NA_EDITED, &ntree->id);
     WM_main_add_notifier(NC_SCENE | ND_NODES, &ntree->id);
     BKE_main_ensure_invariants(*bmain, ntree->id);
@@ -2413,8 +2414,8 @@ static void rna_View3DCursor_rotation_mode_set(PointerRNA *ptr, int value)
                             cursor->rotation_euler,
                             cursor->rotation_axis,
                             &cursor->rotation_angle,
-                            cursor->rotation_mode,
-                            short(value));
+                            eRotationModes(cursor->rotation_mode),
+                            eRotationModes(value));
 
   /* finally, set the new rotation type */
   cursor->rotation_mode = value;
@@ -2595,7 +2596,7 @@ static KeyingSet *rna_Scene_keying_set_new(Scene *sce,
   KeyingSet *ks = nullptr;
 
   /* call the API func, and set the active keyingset index */
-  ks = BKE_keyingset_add(&sce->keyingsets, idname, name, KEYINGSET_ABSOLUTE, 0);
+  ks = BKE_keyingset_add(&sce->keyingsets, idname, name, KEYINGSET_ABSOLUTE, INSERTKEY_NOFLAGS);
 
   if (ks) {
     sce->active_keyingset = BLI_listbase_count(&sce->keyingsets);
@@ -3167,7 +3168,7 @@ static void rna_FFmpegSettings_codec_update(Main * /*bmain*/, Scene * /*scene*/,
     Scene *scene = (Scene *)ptr->owner_id;
     const int valid_depths = BKE_imtype_valid_depths_with_video(scene->r.im_format.imtype, id);
     if ((scene->r.im_format.depth & valid_depths) == 0) {
-      scene->r.im_format.depth = BKE_imtype_first_valid_depth(valid_depths);
+      scene->r.im_format.depth = eImageFormatDepth(BKE_imtype_first_valid_depth(valid_depths));
     }
   }
 }
@@ -8824,6 +8825,21 @@ static void rna_def_raytrace_eevee(BlenderRNA *brna)
                            "Resolution",
                            "Determines the number of rays per pixel. "
                            "Higher resolution uses more memory.");
+  RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_LIBRARY);
+  RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, nullptr);
+
+  prop = RNA_def_property(srna, "use_backface_hit", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_sdna(prop, nullptr, "flag", RAYTRACE_EEVEE_USE_BACKFACE);
+  RNA_def_property_ui_text(prop, "Hit Backfaces", "Consider rays hitting backfaces as valid");
+  RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_LIBRARY);
+  RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, nullptr);
+
+  prop = RNA_def_property(srna, "backface_radiance_scale", PROP_FLOAT, PROP_FACTOR);
+  RNA_def_property_ui_text(prop,
+                           "Backface Radiance Scale",
+                           "Amount of the front face lighting to reuse for backface "
+                           "lighting approximation");
+  RNA_def_property_range(prop, 0.0f, 1.0f);
   RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_LIBRARY);
   RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, nullptr);
 

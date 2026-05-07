@@ -141,9 +141,6 @@ void Camera::sync()
     if (overscan_ != 0.0f) {
       data.winmat = projection_overscan_matrix(film_extent, int2(film_overscan)) * data.winmat;
     }
-    if (inst_.scene->flag & SCE_INTERACTIVE) { // tmp fix for game render loop view UPBGE (no support for overscan)
-      data.winmat = inst_.drw_view->winmat();
-    }
   }
   else if (inst_.render) {
     const Render *re = inst_.render->re;

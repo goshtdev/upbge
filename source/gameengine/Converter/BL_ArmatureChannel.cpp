@@ -137,8 +137,12 @@ PyAttributeDef BL_ArmatureChannel::AttributesPtr[] = {
     EXP_PYATTRIBUTE_FLOAT_VECTOR_RW(
         "rotation_quaternion", -1.0f, 1.0f, blender::bPoseChannel, quat, 4),
     EXP_PYATTRIBUTE_FLOAT_VECTOR_RW("rotation_euler", -10.f, 10.f, blender::bPoseChannel, eul, 3),
-    EXP_PYATTRIBUTE_SHORT_RW(
-        "rotation_mode", ROT_MODE_MIN, ROT_MODE_MAX, false, blender::bPoseChannel, rotmode),
+    EXP_PYATTRIBUTE_ENUM_RW("rotation_mode",
+                             blender::eRotationModes::ROT_MODE_MIN,
+                             blender::eRotationModes::ROT_MODE_MAX,
+                             false,
+                             blender::bPoseChannel,
+                             rotmode),
     EXP_PYATTRIBUTE_FLOAT_MATRIX_RO("channel_matrix", blender::bPoseChannel, chan_mat, 4),
     EXP_PYATTRIBUTE_FLOAT_MATRIX_RO("pose_matrix", blender::bPoseChannel, pose_mat, 4),
     EXP_PYATTRIBUTE_FLOAT_VECTOR_RO("pose_head", blender::bPoseChannel, pose_head, 3),

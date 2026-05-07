@@ -676,7 +676,7 @@ static PyObject *pygpu_ocean_create_default_ocean(PyObject * /*self*/,
   omd.smallest_wave = 0.01f;
   omd.chop_amount = 0.0f;
   omd.wind_velocity = 10.0f;
-  omd.spectrum = 0;
+  omd.spectrum = MOD_OCEAN_SPECTRUM_PHILLIPS;
 
   /* initialize defaults from DNA defaults */
   int resolution = omd.resolution;
@@ -734,7 +734,7 @@ static PyObject *pygpu_ocean_create_default_ocean(PyObject * /*self*/,
     }
     /* else: unknown string -> keep DNA default (Phillips-style handled by default case) */
 
-    omd.spectrum = mapped;
+    omd.spectrum = OceanModifierSpectrum(mapped);
   }
 
   omd.ocean = BKE_ocean_add();

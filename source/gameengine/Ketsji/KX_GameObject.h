@@ -106,7 +106,7 @@ class KX_GameObject : public SCA_IObject {
   bool m_isReplica;
   bool m_forceIgnoreParentTx;
   short m_previousLodLevel;
-  bool m_is_dupli_instance;
+  bool m_isUpbgeDupliInstance;
   /* END OF EEVEE INTEGRATION */
 
   KX_ClientObjectInfo *m_pClient_info;
@@ -132,6 +132,9 @@ class KX_GameObject : public SCA_IObject {
   PHY_IPhysicsController *m_pPhysicsController;
   SG_Node *m_pSGNode;
 
+  /* Warning: This is different from upbge dupli instances
+   * -> it is related to Groups (in old Blender version)
+   *    or Instance Collections (in newer Blender versions) */
   EXP_ListValue<KX_GameObject> *m_pInstanceObjects;
   KX_GameObject *m_pDupliGroupObject;
 
@@ -166,18 +169,18 @@ class KX_GameObject : public SCA_IObject {
   /**
    * Create a dupli based on the existing Blender object.
    * This method does NOT duplicate the Blender object, it only adds the KX_GameObject
-   * to m_duplilist. All the duplis will point to the same BlenderObject.
+   * to m_upbgeDupliInstancesList. All the duplis will point to the same BlenderObject.
    */
-  void CreateDupliObjectFromExisting();
+  void CreateUpbgeDupliInstanceFromExisting();
 
   /**
    * Check if this GameObject is a dupli instance.
    */
-  bool IsDupliInstance() const
+  bool IsUpbgeDupliInstance() const
   {
-    return m_is_dupli_instance;
+    return m_isUpbgeDupliInstance;
   }
-  void TagDupliForTaaReset();
+  void TagUpbgeDupliInstanceForTaaReset();
   /* END OF EEVEE INTEGRATION */
 
   /**

@@ -81,12 +81,12 @@ class BL_ArmatureConstraint : public EXP_Value {
   void SetConstraintFlag(int flag)
   {
     if (m_constraint)
-      m_constraint->flag |= flag;
+      m_constraint->flag |= blender::eBConstraint_Flags(flag);
   }
   void ClrConstraintFlag(int flag)
   {
     if (m_constraint)
-      m_constraint->flag &= ~flag;
+      m_constraint->flag &= ~blender::eBConstraint_Flags(flag);
   }
   void SetWeight(float weight)
   {
