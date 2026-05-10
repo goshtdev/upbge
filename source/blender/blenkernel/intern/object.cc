@@ -1227,8 +1227,9 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
   BLO_read_struct_list(reader, bDeformGroup, &ob->defbase);
   BLO_read_struct_list(reader, bFaceMap, &ob->fmaps);
 
-  BLO_read_pointer_array(reader, ob->totcol, reinterpret_cast<void **>(&ob->mat));
-  BLO_read_char_array(reader, ob->totcol, &ob->matbits);
+  BLO_read_pointer_array_and_validate_size(reader, &ob->mat, &ob->totcol);
+  /* Ignore failure to read, matbis will become null which is valid. */
+  (void)BLO_read_array(reader, &ob->matbits, ob->totcol);
 
   /* do it here, below old data gets converted */
   BKE_modifier_blend_read_data(reader, &ob->modifiers, ob);
@@ -1301,7 +1302,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
     sb->scratch = nullptr;
     /* although not used anymore */
     /* still have to be loaded to be compatible with old files */
-    BLO_read_pointer_array(reader, sb->totkey, reinterpret_cast<void **>(&sb->keys));
+    BLO_read_pointer_array_and_validate_size(reader, &sb->keys, &sb->totkey);
     if (sb->keys) {
       for (int a = 0; a < sb->totkey; a++) {
         BLO_read_struct(reader, SBVertex, &sb->keys[a]);
@@ -1346,7 +1347,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
   BLO_read_struct_list(reader, bSensor, &ob->sensors);
   for (sens = (bSensor *)ob->sensors.first; sens; sens = sens->next) {
     BLO_read_data_address(reader, &sens->data);
-    BLO_read_pointer_array(reader, sens->totlinks, (void **)&sens->links);
+    BLO_read_pointer_array_and_validate_size(reader, &sens->links, &sens->totlinks);
   }
 
   BLO_read_glob_list(reader, &ob->controllers);
@@ -1364,7 +1365,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
   }
   for (cont = (bController *)ob->controllers.first; cont; cont = cont->next) {
     BLO_read_data_address(reader, &cont->data);
-    BLO_read_pointer_array(reader, cont->totlinks, (void **)&cont->links);
+    BLO_read_pointer_array_and_validate_size(reader, &cont->links, &cont->totlinks);
     if (cont->state_mask == 0)
       cont->state_mask = 1;
   }
@@ -1432,7 +1433,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
     HookModifierData *hmd = reinterpret_cast<HookModifierData *>(
         BKE_modifier_new(eModifierType_Hook));
 
-    BLO_read_int32_array(reader, hook->totindex, &hook->indexar);
+    BLO_read_array_and_validate_size(reader, &hook->indexar, &hook->totindex);
 
     /* Do conversion here because if we have loaded
      * a hook we need to make sure it gets converted

@@ -482,25 +482,27 @@ void main() {
 namespace {
 
 /* Compute hash of B-Bone configuration to detect changes */
-static uint32_t compute_bbone_config_hash(Object *armature)
+static uint32_t compute_bbone_config_hash(Object *arm_ob)
 {
-  if (!armature || !armature->pose) {
+  if (!arm_ob || !arm_ob->pose) {
     return 0;
   }
 
   uint32_t hash = 0;
-  for (bPoseChannel *pchan = (bPoseChannel *)armature->pose->chanbase.first; pchan;
+  for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
        pchan = pchan->next)
   {
-    if (!(pchan->bone->flag & BONE_NO_DEFORM)) {
-      hash = BLI_hash_int_2d(hash, pchan->bone->segments);
+    bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+    Bone *bone = pchan->bone_get(*armature);
+    if (!(bone->flag & BONE_NO_DEFORM)) {
+      hash = BLI_hash_int_2d(hash, bone->segments);
     }
   }
   return hash;
 }
 
 /* Compute B-Bone segment info (offsets for both LBS and DQS) */
-static void compute_bbone_segment_info(Object *armature,
+static void compute_bbone_segment_info(Object *arm_ob,
                                        int bone_count,
                                        std::vector<int> &out_segment_counts,
                                        std::vector<int> &out_offsets_lbs,
@@ -516,14 +518,17 @@ static void compute_bbone_segment_info(Object *armature,
   out_total_dqs = 0;
 
   int bi = 0;
-  for (bPoseChannel *pchan = (bPoseChannel *)armature->pose->chanbase.first; pchan;
+  for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
        pchan = pchan->next)
   {
-    if (pchan->bone->flag & BONE_NO_DEFORM) {
+    bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+    Bone *bone = pchan->bone_get(*armature);
+
+    if (bone->flag & BONE_NO_DEFORM) {
       continue;
     }
 
-    const int segments = pchan->bone->segments;
+    const int segments = bone->segments;
     out_segment_counts[bi] = segments;
 
     /* LBS offsets (segments+2 for B-Bones with padding) */
@@ -539,7 +544,7 @@ static void compute_bbone_segment_info(Object *armature,
 }
 
 /* Upload bone head/tail positions (shared between LBS and DQS) */
-static void upload_bone_head_tail(Object *armature,
+static void upload_bone_head_tail(Object *arm_ob,
                                   int bone_count,
                                   Mesh *mesh_owner,
                                   Object *deformed_eval,
@@ -555,13 +560,16 @@ static void upload_bone_head_tail(Object *armature,
   if (ssbo_head_tail) {
     std::vector<float> head_tail_data(bone_count * 8);
     float world_to_armature[4][4];
-    invert_m4_m4(world_to_armature, armature->object_to_world().ptr());
+    invert_m4_m4(world_to_armature, arm_ob->object_to_world().ptr());
 
     int bi = 0;
-    for (bPoseChannel *pchan = (bPoseChannel *)armature->pose->chanbase.first; pchan;
+    for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
          pchan = pchan->next)
     {
-      if (pchan->bone->flag & BONE_NO_DEFORM) {
+      bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+      Bone *bone = pchan->bone_get(*armature);
+
+      if (bone->flag & BONE_NO_DEFORM) {
         continue;
       }
 
@@ -587,7 +595,7 @@ static void upload_bone_head_tail(Object *armature,
 }
 
 /* Upload bone matrices for LBS */
-static void upload_bone_matrices_lbs(Object *armature,
+static void upload_bone_matrices_lbs(Object *arm_ob,
                                      int total_segments,
                                      const std::vector<int> &segment_counts,
                                      Mesh *mesh_owner,
@@ -605,10 +613,13 @@ static void upload_bone_matrices_lbs(Object *armature,
 
     int bi = 0;
     int mat_idx = 0;
-    for (bPoseChannel *pchan = (bPoseChannel *)armature->pose->chanbase.first; pchan;
+    for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
          pchan = pchan->next)
     {
-      if (pchan->bone->flag & BONE_NO_DEFORM) {
+      bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+      Bone *bone = pchan->bone_get(*armature);
+
+      if (bone->flag & BONE_NO_DEFORM) {
         continue;
       }
 
@@ -637,7 +648,7 @@ static void upload_bone_matrices_lbs(Object *armature,
 }
 
 /* Upload dual quaternions for DQS */
-static void upload_bone_dual_quats_dqs(Object *armature,
+static void upload_bone_dual_quats_dqs(Object *arm_ob,
                                        int total_segments,
                                        const std::vector<int> &segment_counts,
                                        Mesh *mesh_owner,
@@ -680,10 +691,13 @@ static void upload_bone_dual_quats_dqs(Object *armature,
 
     int bi = 0;
     int dq_idx = 0;
-    for (bPoseChannel *pchan = (bPoseChannel *)armature->pose->chanbase.first; pchan;
+    for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
          pchan = pchan->next)
     {
-      if (pchan->bone->flag & BONE_NO_DEFORM) {
+      bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+      Bone *bone = pchan->bone_get(*armature);
+
+      if (bone->flag & BONE_NO_DEFORM) {
         continue;
       }
 
@@ -691,10 +705,10 @@ static void upload_bone_dual_quats_dqs(Object *armature,
 
       /* Compute deform_dual_quat for simple bones */
       float imat[4][4];
-      if (pchan->bone) {
-        invert_m4_m4(imat, pchan->bone->arm_mat);
+      if (bone) {
+        invert_m4_m4(imat, bone->arm_mat);
         mul_m4_m4m4(pchan->chan_mat, pchan->pose_mat, imat);
-        mat4_to_dquat(&pchan->runtime.deform_dual_quat, pchan->bone->arm_mat, pchan->chan_mat);
+        mat4_to_dquat(&pchan->runtime.deform_dual_quat, bone->arm_mat, pchan->chan_mat);
       }
 
       if (segments > 1 && pchan->runtime.bbone_segments == segments &&
@@ -862,7 +876,10 @@ void ArmatureSkinningManager::ensure_static_resources(const ArmatureModifierData
     for (bPoseChannel *pchan = (bPoseChannel *)arm_ob->pose->chanbase.first; pchan;
          pchan = pchan->next)
     {
-      if (!(pchan->bone->flag & BONE_NO_DEFORM)) {
+      bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+      Bone *bone = pchan->bone_get(*armature);
+
+      if (!(bone->flag & BONE_NO_DEFORM)) {
         bone_name_to_index.add_new(pchan->name, idx++);
       }
     }
@@ -1008,12 +1025,12 @@ void ArmatureSkinningManager::ensure_static_resources(const ArmatureModifierData
 gpu::StorageBuf *ArmatureSkinningManager::dispatch_skinning(
     const ArmatureModifierData *amd,
     Depsgraph * /*depsgraph*/,
-    Object *eval_armature,
+    Object *eval_armature_ob,
     Object *deformed_eval,
     MeshBatchCache *cache,
     gpu::StorageBuf *ssbo_in)
 {
-  if (!amd || !eval_armature || !ssbo_in) {
+  if (!amd || !eval_armature_ob || !ssbo_in) {
     return nullptr;
   }
 
@@ -1050,7 +1067,7 @@ gpu::StorageBuf *ArmatureSkinningManager::dispatch_skinning(
   float premat[4][4], postmat[4][4], obinv[4][4];
   invert_m4_m4(obinv, deformed_eval->object_to_world().ptr());
   copy_m4_m4(premat, deformed_eval->object_to_world().ptr());
-  mul_m4_m4m4(postmat, obinv, eval_armature->object_to_world().ptr());
+  mul_m4_m4m4(postmat, obinv, eval_armature_ob->object_to_world().ptr());
   invert_m4_m4(premat, postmat);
 
   /* ensure/upload per-mesh SSBOs (use GPU_storagebuf_update directly) */
@@ -1133,7 +1150,10 @@ gpu::StorageBuf *ArmatureSkinningManager::dispatch_skinning(
       for (bPoseChannel *pchan = (bPoseChannel *)msd.arm->pose->chanbase.first; pchan;
            pchan = pchan->next)
       {
-        if (!(pchan->bone->flag & BONE_NO_DEFORM)) {
+        bArmature *armature = id_cast<bArmature *>(eval_armature_ob->data);
+        Bone *bone = pchan->bone_get(*armature);
+
+        if (!(bone->flag & BONE_NO_DEFORM)) {
           bc++;
         }
       }
@@ -1227,7 +1247,7 @@ gpu::StorageBuf *ArmatureSkinningManager::dispatch_skinning(
 
         /* Upload bone_head_tail (shared, update every frame) */
         upload_bone_head_tail(
-            eval_armature, msd.bones, mesh_owner, deformed_eval, key_bone_head_tail);
+            eval_armature_ob, msd.bones, mesh_owner, deformed_eval, key_bone_head_tail);
 
         /* Upload dual quaternions (DQS-specific, update every frame) */
         upload_bone_dual_quats_dqs(msd.arm,
@@ -1296,7 +1316,7 @@ gpu::StorageBuf *ArmatureSkinningManager::dispatch_skinning(
 
         /* Upload bone_head_tail (shared, update every frame) */
         upload_bone_head_tail(
-            eval_armature, msd.bones, mesh_owner, deformed_eval, key_bone_head_tail);
+            eval_armature_ob, msd.bones, mesh_owner, deformed_eval, key_bone_head_tail);
 
         /* Upload bone matrices (LBS-specific, update every frame) */
         upload_bone_matrices_lbs(msd.arm,
