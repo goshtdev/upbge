@@ -179,9 +179,13 @@ PyObject *BL_ArmatureChannel::py_attr_getattr(EXP_PyObjectPlus *self_v,
   }
 
   switch (attr_order) {
-    case BCA_BONE:
+    case BCA_BONE: {
+      Object *arm_ob = self->m_armature->GetBlenderObject();
+      bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+      Bone *bone = channel->bone_get(*armature);
       // bones are standalone proxy
-      return NewProxyPlus_Ext(nullptr, &BL_ArmatureBone::Type, channel->bone, false);
+      return NewProxyPlus_Ext(nullptr, &BL_ArmatureBone::Type, bone, false);
+    }
     case BCA_PARENT: {
       BL_ArmatureChannel *parent = self->m_armature->GetChannel(channel->parent);
       if (parent)
@@ -236,14 +240,17 @@ PyObject *BL_ArmatureChannel::py_attr_get_joint_rotation(EXP_PyObjectPlus *self_
   // get rotation in armature space
   copy_m3_m4(pose_mat, pchan->pose_mat);
   normalize_m3(pose_mat);
+  Object *arm_ob = self->m_armature->GetBlenderObject();
+  bArmature *armature = id_cast<bArmature *>(arm_ob->data);
+  Bone *bone = pchan->bone_get(*armature);
   if (pchan->parent) {
     // bone has a parent, compute the rest pose of the bone taking actual pose of parent
-    mul_m3_m4m3(rest_mat, pchan->parent->pose_mat, pchan->bone->bone_mat);
+    mul_m3_m4m3(rest_mat, pchan->parent->pose_mat, bone->bone_mat);
     normalize_m3(rest_mat);
   }
   else {
     // otherwise, the bone matrix in armature space is the rest pose
-    copy_m3_m4(rest_mat, pchan->bone->arm_mat);
+    copy_m3_m4(rest_mat, bone->arm_mat);
   }
   // remove the rest pose to get the joint movement
   transpose_m3(rest_mat);

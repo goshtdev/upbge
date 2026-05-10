@@ -1347,7 +1347,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
   BLO_read_struct_list(reader, bSensor, &ob->sensors);
   for (sens = (bSensor *)ob->sensors.first; sens; sens = sens->next) {
     BLO_read_data_address(reader, &sens->data);
-    BLO_read_pointer_array(reader, sens->totlinks, (void **)&sens->links);
+    BLO_read_pointer_array_and_validate_size(reader, &sens->links, &sens->totlinks);
   }
 
   BLO_read_glob_list(reader, &ob->controllers);
@@ -1365,7 +1365,7 @@ static void object_blend_read_data(BlendDataReader *reader, ID *id)
   }
   for (cont = (bController *)ob->controllers.first; cont; cont = cont->next) {
     BLO_read_data_address(reader, &cont->data);
-    BLO_read_pointer_array(reader, cont->totlinks, (void **)&cont->links);
+    BLO_read_pointer_array_and_validate_size(reader, &cont->links, &cont->totlinks);
     if (cont->state_mask == 0)
       cont->state_mask = 1;
   }
